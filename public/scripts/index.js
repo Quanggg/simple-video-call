@@ -1,4 +1,131 @@
+// WebSocket
+const SIGNALING_SERVER = "wss://192.168.1.125:3000/"
+
+window.WebSocket = window.WebSocket || window.MozWebSocket
+const wsConnection = new WebSocket(SIGNALING_SERVER, "json")
+
+const signaler = {
+  send: (payload) => {
+    console.log("Sending:", { type: payload.type, to: payload.target })
+    wsConnection.send(JSON.stringify(payload))
+  },
+}
+
+wsConnection.onmessage = (message) => {
+  const data = JSON.parse(message.data)
+  console.log("Received:", data)
+  handleMessage(data)
+}
+// WebRTC
+let clientID
+let targetID = null
+const { RTCPeerConnection, RTCSessionDescription } = window
+const peerConnection = new RTCPeerConnection()
+
+peerConnection.ontrack = ({ track, streams }) => {
+  track.onunmute = () => {
+    const remoteVideo = document.getElementById("remote-video")
+    if (remoteVideo) {
+      remoteVideo.srcObject = streams[0]
+    }
+  }
+}
+
+peerConnection.onicecandidate = (e) => {
+  if (e.candidate && targetID !== null)
+    signaler.send({
+      type: "new-ice-candidate",
+      candidate: e.candidate,
+      target: targetID,
+    })
+}
+
+const handleMessage = async (data) => {
+  switch (data.type) {
+    case "id":
+      clientID = data.id
+      break
+    case "update-user-list": {
+      updateUserList(data.users)
+      break
+    }
+    case "remove-user": {
+      const elToRemove = document.getElementById(data.id)
+      if (elToRemove) elToRemove.remove()
+      break
+    }
+    case "incoming-call": {
+      const confirmed = confirm(
+        `UserID: ${data.from} want to call you. Do you accept this call?`
+      )
+      if (!confirmed)
+        return signaler.send({
+          type: "reject-call",
+          target: data.from,
+        })
+      // accept call
+      targetID = data.from
+      await peerConnection.setLocalDescription()
+      signaler.send({
+        type: "accept-call",
+        sdp: peerConnection.localDescription,
+        target: data.from,
+      })
+      break
+    }
+    case "call-rejected": {
+      alert(`UserID: ${data.from} rejected your call`)
+      break
+    }
+    case "call-accepted": {
+      targetID = data.from
+      await peerConnection.setRemoteDescription(
+        new RTCSessionDescription(data.sdp)
+      )
+      await peerConnection.setLocalDescription()
+      signaler.send({
+        type: "send-caller-sdp",
+        sdp: peerConnection.localDescription,
+        target: data.from,
+      })
+      break
+    }
+    case "caller-sdp-incoming": {
+      await peerConnection.setRemoteDescription(
+        new RTCSessionDescription(data.sdp)
+      )
+      break
+    }
+    case "new-ice-candidate": {
+      try {
+        await peerConnection.addIceCandidate(data.candidate)
+      } catch (error) {
+        console.error(error)
+      }
+      break
+    }
+    default:
+      break
+  }
+}
 // front-end
+const initLocalMedia = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true,
+    })
+
+    for (const track of stream.getTracks())
+      peerConnection.addTrack(track, stream)
+
+    const localVideo = document.getElementById("local-video")
+    if (localVideo) localVideo.srcObject = stream
+  } catch (error) {
+    console.error(error)
+  }
+}
+initLocalMedia()
 function unselectUsersFromList() {
   const alreadySelectedUser = document.querySelectorAll(
     ".active-user.active-user--selected"
@@ -26,42 +153,14 @@ function createUserItemContainer(userID) {
     userContainerEl.setAttribute("class", "active-user active-user--selected")
     const talkingWithInfo = document.getElementById("talking-with-info")
     talkingWithInfo.innerHTML = `Talking with: "Socket: ${userID}"`
-    callUser(userID)
+    // call-user
+    signaler.send({
+      type: "call-user",
+      target: userID,
+    })
   })
 
   return userContainerEl
-}
-
-//
-let clientID
-let isAlreadyCalling = false
-let getCalled = false
-
-const SIGNALING_SERVER = "wss://192.168.1.46:3000/"
-
-const { RTCPeerConnection, RTCSessionDescription } = window
-const peerConnection = new RTCPeerConnection()
-let dataChannel
-let targetID = null
-
-window.WebSocket = window.WebSocket || window.MozWebSocket
-const connection = new WebSocket(SIGNALING_SERVER, "json")
-
-const mySend = (payload) => {
-  console.log("Sending:", { type: payload.type, to: payload.target })
-  connection.send(JSON.stringify(payload))
-}
-const callUser = (userID) => {
-  mySend({
-    type: "call-user",
-    target: userID,
-  })
-}
-const signaler = {
-  send: (payload) => {
-    console.log("Sending:", { type: payload.type, to: payload.target })
-    connection.send(JSON.stringify(payload))
-  },
 }
 
 function updateUserList(userList) {
@@ -75,108 +174,4 @@ function updateUserList(userList) {
       activeUserContainer.appendChild(userContainerEl)
     }
   })
-}
-connection.onmessage = async (message) => {
-  const data = JSON.parse(message.data)
-  console.log("Received:", data)
-
-  switch (data.type) {
-    case "id":
-      clientID = data.id
-      break
-    case "update-user-list": {
-      updateUserList(data.users)
-      break
-    }
-    case "remove-user": {
-      const elToRemove = document.getElementById(data.id)
-      if (elToRemove) elToRemove.remove()
-      break
-    }
-    case "incoming-call": {
-      const confirmed = confirm(
-        `UserID: ${data.from} want to call you. Do you accept this call?`
-      )
-      if (!confirmed)
-        return mySend({
-          type: "reject-call",
-          target: data.from,
-        })
-      // accept call
-      targetID = data.from
-      await peerConnection.setLocalDescription()
-      mySend({
-        type: "accept-call",
-        sdp: peerConnection.localDescription,
-        target: data.from,
-      })
-      break
-    }
-    case "call-rejected": {
-      alert(`UserID: ${data.from} rejected your call`)
-      break
-    }
-    case "call-accepted": {
-      targetID = data.from
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(data.sdp)
-      )
-      await peerConnection.setLocalDescription()
-      mySend({
-        type: "send-caller-sdp",
-        sdp: peerConnection.localDescription,
-        target: data.from,
-      })
-      break
-    }
-    case "caller-sdp-incoming": {
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(data.sdp)
-      )
-      break
-    }
-    case "new-ice-candidate": {
-      try {
-        await peerConnection.addIceCandidate(data.candidate)
-      } catch (error) {
-        console.error(error)
-      }
-      break
-    }
-    default:
-      break
-  }
-}
-
-peerConnection.ontrack = function ({ streams: [stream] }) {
-  const remoteVideo = document.getElementById("remote-video")
-  if (remoteVideo) {
-    remoteVideo.srcObject = stream
-  }
-}
-
-navigator.getUserMedia(
-  { video: true, audio: true },
-  (stream) => {
-    const localVideo = document.getElementById("local-video")
-    if (localVideo) {
-      localVideo.srcObject = stream
-    }
-
-    stream
-      .getTracks()
-      .forEach((track) => peerConnection.addTrack(track, stream))
-  },
-  (error) => {
-    console.warn(error.message)
-  }
-)
-
-peerConnection.onicecandidate = (e) => {
-  if (e.candidate && targetID !== null)
-    mySend({
-      type: "new-ice-candidate",
-      candidate: e.candidate,
-      target: targetID,
-    })
 }
