@@ -56,7 +56,7 @@ const handleMessage = async (data) => {
     }
     case "incoming-call": {
       const confirmed = confirm(
-        UserID: ${data.from} want to call you. Do you accept this call?
+        `UserID: ${data.from} want to call you. Do you accept this call?`
       )
       if (!confirmed)
         return signaler.send({
@@ -74,7 +74,7 @@ const handleMessage = async (data) => {
       break
     }
     case "call-rejected": {
-      alert(UserID: ${data.from} rejected your call)
+      alert(`UserID: ${data.from} rejected your call`)
       break
     }
     case "call-accepted": {
@@ -144,7 +144,7 @@ function createUserItemContainer(userID) {
   userContainerEl.setAttribute("class", "active-user")
   userContainerEl.setAttribute("id", userID)
   usernameEl.setAttribute("class", "username")
-  usernameEl.innerHTML = Socket: ${userID}
+  usernameEl.innerHTML = `Socket: ${userID}`
 
   userContainerEl.appendChild(usernameEl)
 
@@ -152,7 +152,7 @@ function createUserItemContainer(userID) {
     unselectUsersFromList()
     userContainerEl.setAttribute("class", "active-user active-user--selected")
     const talkingWithInfo = document.getElementById("talking-with-info")
-    talkingWithInfo.innerHTML = Talking with: "Socket: ${userID}"
+    talkingWithInfo.innerHTML = `Talking with: "Socket: ${userID}"`
     // call-user
     signaler.send({
       type: "call-user",
