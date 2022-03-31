@@ -2,7 +2,7 @@ const port = 443
 const hostname = "192.168.0.12" //"localhost" //"192.168.0.9"
 
 const express = require("express")
-const webSocket = require("webSocket")
+const webSocket = require("websocket")
 const https = require("https")
 const fs = require("fs")
 

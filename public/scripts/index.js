@@ -1,5 +1,5 @@
 // WebSocket
-const SIGNALING_SERVER = "wss://192.168.0.12:443/"
+const SIGNALING_SERVER = "wss://quang-simple-video-call.herokuapp.com:443/"
 
 window.WebSocket = window.WebSocket || window.MozWebSocket
 const wsConnection = new WebSocket(SIGNALING_SERVER, "json")
