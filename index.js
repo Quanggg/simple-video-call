@@ -1,13 +1,9 @@
 const port = process.env.PORT || 3000 // need this
 const hostname = "192.168.0.12" //"localhost" //"192.168.0.9"
+const subprotocol = "json"
 
 const express = require("express")
 const webSocket = require("websocket")
-const https = require("https")
-const fs = require("fs")
-
-const key = fs.readFileSync("./cert/CA/localhost/localhost.decrypted.key")
-const cert = fs.readFileSync("./cert/CA/localhost/localhost.crt")
 const app = express()
 const WebSocketServer = webSocket.server
 
@@ -19,10 +15,12 @@ app.use((req, res, next) => {
   console.log("Receive request from: ", req.socket.remoteAddress)
   next()
 })
-app.get("/", (req, res) => {
-  res.send("WEBSOCKET SERVER")
-})
-// ---- HTTPS server
+// ---------- HTTPS server -----------------
+// const https = require("https")
+// const fs = require("fs")
+// const key = fs.readFileSync("./cert/CA/localhost/localhost.decrypted.key")
+// const cert = fs.readFileSync("./cert/CA/localhost/localhost.crt")
+
 // const server = https.createServer({ key, cert }, app)
 
 // server.listen(port, hostname, () => {
@@ -30,12 +28,11 @@ app.get("/", (req, res) => {
 //   console.log(`App listening on https://${host}:${port}`)
 // })
 
+// -------------------------------------
 // ---- HTTP server
-
-const server = app.listen(port, () => {
-  const host = server.address().address
-  console.log(`App listening on http://${host}:${port}`)
-})
+const server = app.listen(port, () =>
+  console.log("App listening on port:", port)
+)
 
 let _connectionList = []
 let _nextID = 0
@@ -45,10 +42,11 @@ const wsServer = new WebSocketServer({
 })
 wsServer.on("request", (req) => {
   const origin = req.origin + req.resource
-  const connection = req.accept("json", origin)
+  const connection = req.accept(subprotocol, origin)
 
   _connectionList.push(connection)
-  console.log(new Date(), "Connection from origin", origin, "ID:", _nextID)
+  console.log(new Date(), "Connection from", origin)
+  console.log("Connection ID:", _nextID)
   connection.clientID = _nextID++
 
   const res = {
@@ -109,7 +107,6 @@ const getConnection = (id) => {
 }
 const handleEvent = (message, connection) => {
   const { type, ...data } = message
-  // console.log({ type, from: connection.clientID, to: data.target })
   switch (type) {
     case "call-user": {
       const msg = {
