@@ -1,5 +1,5 @@
-const port = 3000
-const hostname = "192.168.1.46" //"localhost" //"192.168.0.9"
+const port = 443
+const hostname = "192.168.0.12" //"localhost" //"192.168.0.9"
 
 const express = require("express")
 const webSocket = require("webSocket")
@@ -22,11 +22,19 @@ app.use((req, res, next) => {
 app.get("/", (req, res) => {
   res.send("WEBSOCKET SERVER")
 })
-const server = https.createServer({ key, cert }, app)
+// ---- HTTPS server
+// const server = https.createServer({ key, cert }, app)
 
-server.listen(port, hostname, () => {
+// server.listen(port, hostname, () => {
+//   const host = server.address().address
+//   console.log(`App listening on https://${host}:${port}`)
+// })
+
+// ---- HTTP server
+
+const server = app.listen(port, () => {
   const host = server.address().address
-  console.log(`App listening on https://${host}:${port}`)
+  console.log(`App listening on http://${host}:${port}`)
 })
 
 let _connectionList = []
@@ -37,7 +45,7 @@ const wsServer = new WebSocketServer({
 })
 wsServer.on("request", (req) => {
   const origin = req.origin + req.resource
-  const connection = req.accept("json", origin)
+  const connection = req.accept(null, origin)
 
   _connectionList.push(connection)
   console.log(new Date(), "Connection from origin", origin, "ID:", _nextID)
