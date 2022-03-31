@@ -2,7 +2,7 @@
 const SIGNALING_SERVER = "wss://quang-simple-video-call.herokuapp.com/"
 
 window.WebSocket = window.WebSocket || window.MozWebSocket
-const wsConnection = new WebSocket(SIGNALING_SERVER)
+const wsConnection = new WebSocket(SIGNALING_SERVER, "json")
 
 const signaler = {
   send: (payload) => {

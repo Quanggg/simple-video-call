@@ -45,7 +45,7 @@ const wsServer = new WebSocketServer({
 })
 wsServer.on("request", (req) => {
   const origin = req.origin + req.resource
-  const connection = req.accept(null, origin)
+  const connection = req.accept("json", origin)
 
   _connectionList.push(connection)
   console.log(new Date(), "Connection from origin", origin, "ID:", _nextID)
