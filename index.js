@@ -1,4 +1,4 @@
-const port = 443
+const port = process.env.PORT || 3000 // need this
 const hostname = "192.168.0.12" //"localhost" //"192.168.0.9"
 
 const express = require("express")
