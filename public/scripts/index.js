@@ -23,12 +23,12 @@ const { RTCPeerConnection, RTCSessionDescription } = window
 const peerConnection = new RTCPeerConnection()
 
 peerConnection.ontrack = ({ track, streams }) => {
-  track.onunmute = () => {
+//   track.onunmute = () => {
     const remoteVideo = document.getElementById("remote-video")
     if (remoteVideo) {
       remoteVideo.srcObject = streams[0]
     }
-  }
+//   }
 }
 
 peerConnection.onicecandidate = (e) => {
