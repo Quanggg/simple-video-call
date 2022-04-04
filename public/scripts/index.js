@@ -20,7 +20,10 @@ wsConnection.onmessage = (message) => {
 let clientID
 let targetID = null
 const { RTCPeerConnection, RTCSessionDescription } = window
-const peerConnection = new RTCPeerConnection()
+const config = {
+  iceServers: [{urls: "stun:stun.l.google.com:19302"}]
+}
+const peerConnection = new RTCPeerConnection(config)
 
 peerConnection.ontrack = ({ track, streams }) => {
 //   track.onunmute = () => {
